@@ -41,16 +41,14 @@ class BotController {
 
 					//trigger first foresight
 					try {
-						setTimeout(() => {
-							this.onMessage({
-								text: "/foresight",
-								chat: {
-									id: chatId,
-									type: "private",
-								},
-								date: +Date.now().toString().slice(0, -3),
-							} as Message);
-						}, 0);
+						await this.onMessage({
+							text: "/foresight",
+							chat: {
+								id: chatId,
+								type: "private",
+							},
+							date: +Date.now().toString().slice(0, -3),
+						} as Message);
 					} catch (e) {
 						console.error(e);
 					}
