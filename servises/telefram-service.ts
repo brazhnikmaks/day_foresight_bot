@@ -10,4 +10,4 @@ const bot = new TelegramApi(
 	process.env.NODE_ENV === "development" ? botOptions : undefined,
 );
 
-export { bot };
+export default bot;
