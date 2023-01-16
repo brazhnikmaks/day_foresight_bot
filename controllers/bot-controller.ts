@@ -10,7 +10,7 @@ class BotController {
 			{ command: "/start", description: "Запуск бота" },
 			{ command: "/foresight", description: "Передбачення" },
 			{ command: "/subscribe", description: "Відписатися / Підписатися" },
-			{ command: "/silent", description: "Без оповіщень / З оповіщеннями" },
+			{ command: "/silent", description: "Без звуку / Зі звуком" },
 		]);
 	}
 
@@ -31,13 +31,27 @@ class BotController {
 				await db.connect();
 				try {
 					await db.addChat(chatId, gmt);
-					return bot.sendMessage(
+					bot.sendMessage(
 						chatId,
-						`Вітаю, Ви запустили щоденні передбачення.\nВи можете отримати *одне* передбачення на день.\nВи можете *відписатися* від щоденних передбачень.\nВи можете *запросити* передбачення раніше запланованого.\nВи можете налаштувати передбачення *без оповіщення*.\n\nОсь )ваше передбачення на сьогодні:`,
+						`Вітаю, Ви запустили щоденні передбачення.\nВи можете отримати *одне* передбачення на день.\nВи можете *відписатися* від щоденних передбачень.\nВи можете *запросити* передбачення раніше запланованого.\nВи можете налаштувати передбачення *без оповіщення*.\n\nОсь ваше передбачення на сьогодні:`,
 						{
 							parse_mode: "Markdown",
 						},
 					);
+
+					//trigger first foresight
+					try {
+						this.onMessage({
+							text: "/foresight",
+							chat: {
+								id: chatId,
+								type: "private",
+							},
+							date: +Date.now().toString().slice(0, -3),
+						} as Message);
+					} catch (e) {
+						console.error(e);
+					}
 				} catch (e) {
 					try {
 						await db.getChat(chatId);
@@ -74,7 +88,7 @@ class BotController {
 					);
 
 					const isAlreadyReceived =
-						dateNow - new Date(chatDate).getTime() < 86400000;
+						chatDate && dateNow - new Date(chatDate).getTime() < 86400000;
 					if (isAlreadyReceived) {
 						return bot.sendMessage(chatId, "🚫 Один день - одне передбачення.");
 					}
@@ -174,6 +188,7 @@ class BotController {
 						0,
 					);
 					const isAlreadyReceived =
+						lastReceivedDate &&
 						dateNow - new Date(lastReceivedDate).getTime() < 86400000;
 					if (isAlreadyReceived) return;
 

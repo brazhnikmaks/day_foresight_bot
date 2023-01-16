@@ -5,6 +5,8 @@ import botController from "../../controllers/bot-controller";
 const handler: Handler = async (event: HandlerEvent) => {
 	const message = JSON.parse(event.body!).message as Message;
 
+	const messageController = botController.onMessage.bind(botController);
+
 	console.log(
 		JSON.stringify({
 			username: message.from?.username,
@@ -14,7 +16,7 @@ const handler: Handler = async (event: HandlerEvent) => {
 		}),
 	);
 
-	await botController.onMessage(message);
+	await messageController(message);
 
 	return { statusCode: 200 };
 };
