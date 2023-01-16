@@ -2,12 +2,11 @@ import { Handler, schedule } from "@netlify/functions";
 import botController from "../../controllers/bot-controller";
 
 const dailyHandler: Handler = async () => {
-	const dailyController = botController.dailyForesight.bind(botController);
-	await dailyController();
+	await botController.dailyForesight.bind(botController)();
 
 	return { statusCode: 200 };
 };
 
-const handler = schedule("@daily", dailyHandler);
+const handler = schedule("10 0 * * *", dailyHandler);
 
 export { handler };
