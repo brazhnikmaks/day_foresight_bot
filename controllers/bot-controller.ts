@@ -14,8 +14,8 @@ class BotController {
 		]);
 	}
 
-	static sendError(chatId: number) {
-		bot.sendMessage(chatId, `Помилочка  ¯\\_(ツ)_/¯`);
+	static async sendError(chatId: number) {
+		await bot.sendMessage(chatId, `Помилочка  ¯\\_(ツ)_/¯`);
 	}
 
 	async onMessage(msg: Message) {
@@ -56,7 +56,7 @@ class BotController {
 					try {
 						await db.getChat(chatId);
 						await db.chatSubscribe(chatId, true, gmt);
-						return bot.sendMessage(
+						return await bot.sendMessage(
 							chatId,
 							`Я вже знаю про вас все. Ви знову підписані на щоденні передбачення.`,
 							{
@@ -64,11 +64,11 @@ class BotController {
 							},
 						);
 					} catch (e) {
-						BotController.sendError(chatId);
+						await BotController.sendError(chatId);
 					}
 				}
 			} catch (e) {
-				BotController.sendError(chatId);
+				await BotController.sendError(chatId);
 			}
 		}
 
@@ -90,7 +90,10 @@ class BotController {
 					const isAlreadyReceived =
 						chatDate && dateNow - new Date(chatDate).getTime() < 86400000;
 					if (isAlreadyReceived) {
-						return bot.sendMessage(chatId, "🚫 Один день - одне передбачення.");
+						return await bot.sendMessage(
+							chatId,
+							"🚫 Один день - одне передбачення.",
+						);
 					}
 
 					const foresights = await db.getForesights();
@@ -102,19 +105,19 @@ class BotController {
 					let foresight: ForesightDto;
 					if (!notReceivedForesights.length) {
 						foresight = foresights[getRandom(foresights.length)];
-						db.updateChatReceived(chatId, foresight.id, true, gmt);
+						await db.updateChatReceived(chatId, foresight.id, true, gmt);
 					} else {
 						foresight =
 							notReceivedForesights[getRandom(notReceivedForesights.length)];
-						db.updateChatReceived(chatId, foresight.id, false, gmt);
+						await db.updateChatReceived(chatId, foresight.id, false, gmt);
 					}
 
-					return bot.sendMessage(chatId, `🥠 ${foresight.text}`);
+					return await bot.sendMessage(chatId, `🥠 ${foresight.text}`);
 				} catch (e) {
-					BotController.sendError(chatId);
+					await BotController.sendError(chatId);
 				}
 			} catch (e) {
-				BotController.sendError(chatId);
+				await BotController.sendError(chatId);
 			}
 		}
 
@@ -127,7 +130,7 @@ class BotController {
 
 					await db.chatSubscribe(chatId, newSub, gmt);
 
-					return bot.sendMessage(
+					return await bot.sendMessage(
 						chatId,
 						newSub
 							? "Ви підписалися на щоденні передбачення."
@@ -137,10 +140,10 @@ class BotController {
 						},
 					);
 				} catch (e) {
-					BotController.sendError(chatId);
+					await BotController.sendError(chatId);
 				}
 			} catch (e) {
-				BotController.sendError(chatId);
+				await BotController.sendError(chatId);
 			}
 		}
 
@@ -153,7 +156,7 @@ class BotController {
 
 					await db.chatSilent(chatId, newSilent, gmt);
 
-					return bot.sendMessage(
+					return await bot.sendMessage(
 						chatId,
 						newSilent
 							? "🔇 Ваші пердбачення будуть надходити без звуку."
@@ -163,10 +166,10 @@ class BotController {
 						},
 					);
 				} catch (e) {
-					BotController.sendError(chatId);
+					await BotController.sendError(chatId);
 				}
 			} catch (e) {
-				BotController.sendError(chatId);
+				await BotController.sendError(chatId);
 			}
 		}
 	}
@@ -180,36 +183,38 @@ class BotController {
 					db.getChats({ subscribed: true }),
 				]);
 
-				chats.forEach(({ id, lastReceivedDate, silent, gmt, received }) => {
-					const dateNow = new Date(Date.now() - gmt * 60 * 1000).setUTCHours(
-						0,
-						0,
-						0,
-						0,
-					);
-					const isAlreadyReceived =
-						lastReceivedDate &&
-						dateNow - new Date(lastReceivedDate).getTime() < 86400000;
-					if (isAlreadyReceived) return;
+				chats.forEach(
+					async ({ id, lastReceivedDate, silent, gmt, received }) => {
+						const dateNow = new Date(Date.now() - gmt * 60 * 1000).setUTCHours(
+							0,
+							0,
+							0,
+							0,
+						);
+						const isAlreadyReceived =
+							lastReceivedDate &&
+							dateNow - new Date(lastReceivedDate).getTime() < 86400000;
+						if (isAlreadyReceived) return;
 
-					const notReceivedForesights = foresights.filter(
-						(foresight) => !received.includes(foresight.id),
-					);
+						const notReceivedForesights = foresights.filter(
+							(foresight) => !received.includes(foresight.id),
+						);
 
-					let foresight: ForesightDto;
-					if (!notReceivedForesights.length) {
-						foresight = foresights[getRandom(foresights.length)];
-						db.updateChatReceived(id, foresight.id, true);
-					} else {
-						foresight =
-							notReceivedForesights[getRandom(notReceivedForesights.length)];
-						db.updateChatReceived(id, foresight.id, false);
-					}
+						let foresight: ForesightDto;
+						if (!notReceivedForesights.length) {
+							foresight = foresights[getRandom(foresights.length)];
+							await db.updateChatReceived(id, foresight.id, true);
+						} else {
+							foresight =
+								notReceivedForesights[getRandom(notReceivedForesights.length)];
+							await db.updateChatReceived(id, foresight.id, false);
+						}
 
-					return bot.sendMessage(id, `🥠 ${foresight.text}`, {
-						disable_notification: silent,
-					});
-				});
+						return await bot.sendMessage(id, `🥠 ${foresight.text}`, {
+							disable_notification: silent,
+						});
+					},
+				);
 			} catch (e) {}
 		} catch (e) {}
 	}
