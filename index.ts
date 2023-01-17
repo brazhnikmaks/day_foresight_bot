@@ -3,4 +3,4 @@ import BotController from "./controllers/bot-controller";
 
 bot.on("message", BotController.onMessage.bind(BotController));
 
-BotController.dailyForesight();
+BotController.foresightForAll();

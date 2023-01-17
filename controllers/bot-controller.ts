@@ -220,7 +220,7 @@ class BotController {
 		}
 	}
 
-	async dailyForesight() {
+	async foresightForAll() {
 		const dateNow = new Date(Date.now() + 120 * 60 * 1000);
 		const currentHour = dateNow.getHours();
 		const beginDateTime = dateNow.setUTCHours(0, 0, 0, 0);
@@ -228,43 +228,61 @@ class BotController {
 		try {
 			await db.connect();
 			try {
-				const [foresights, chats] = await Promise.all([
-					db.getForesights(),
-					db.getChats({ subscribed: true, receiveHour: currentHour }),
-				]);
+				const chats = await db.getChats({
+					subscribed: true,
+					receiveHour: currentHour,
+				});
+
+				const notReceivedChats = chats.filter(
+					({ lastReceivedDate }) =>
+						!(
+							lastReceivedDate &&
+							beginDateTime - new Date(lastReceivedDate).getTime() < 86400000
+						),
+				);
+
+				if (!notReceivedChats.length) {
+					return;
+				}
+
+				const foresights = await db.getForesights();
 
 				await Promise.all(
-					chats.map(async ({ id, lastReceivedDate, silent, received }) => {
-						const isAlreadyReceived =
-							lastReceivedDate &&
-							beginDateTime - new Date(lastReceivedDate).getTime() < 86400000;
-						if (isAlreadyReceived) return;
+					notReceivedChats.map(
+						async ({ id, lastReceivedDate, silent, received }) => {
+							const isAlreadyReceived =
+								lastReceivedDate &&
+								beginDateTime - new Date(lastReceivedDate).getTime() < 86400000;
+							if (isAlreadyReceived) return;
 
-						const notReceivedForesights = foresights.filter(
-							(foresight) => !received.includes(foresight.id),
-						);
+							const notReceivedForesights = foresights.filter(
+								(foresight) => !received.includes(foresight.id),
+							);
 
-						let foresight: ForesightDto;
-						if (!notReceivedForesights.length) {
-							foresight = foresights[getRandom(foresights.length)];
-							await db.updateChatReceived(id, foresight.id, true);
-						} else {
-							foresight =
-								notReceivedForesights[getRandom(notReceivedForesights.length)];
-							await db.updateChatReceived(id, foresight.id, false);
-						}
-
-						try {
-							await bot.sendMessage(id, `🥠 ${foresight.text}`, {
-								disable_notification: silent,
-							});
-						} catch (e) {
-							// @ts-ignore
-							if (e.response.body.error_code === 403) {
-								await db.chatSubscribe(id, false);
+							let foresight: ForesightDto;
+							if (!notReceivedForesights.length) {
+								foresight = foresights[getRandom(foresights.length)];
+								await db.updateChatReceived(id, foresight.id, true);
+							} else {
+								foresight =
+									notReceivedForesights[
+										getRandom(notReceivedForesights.length)
+									];
+								await db.updateChatReceived(id, foresight.id, false);
 							}
-						}
-					}),
+
+							try {
+								await bot.sendMessage(id, `🥠 ${foresight.text}`, {
+									disable_notification: silent,
+								});
+							} catch (e) {
+								// @ts-ignore
+								if (e.response.body.error_code === 403) {
+									await db.chatSubscribe(id, false);
+								}
+							}
+						},
+					),
 				);
 			} catch (e) {}
 		} catch (e) {}
