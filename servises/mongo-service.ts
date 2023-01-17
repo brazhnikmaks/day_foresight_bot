@@ -43,17 +43,16 @@ class MongoService {
 		return new ChatDto(chat);
 	}
 
-	async addChat(chatId: number, gmt?: number) {
-		const chat = await ChatModel.create({ id: chatId, gmt });
+	async addChat(chatId: number) {
+		const chat = await ChatModel.create({ id: chatId });
 		return new ChatDto(chat);
 	}
 
-	async chatSilent(chatId: number, silent: boolean, gmt?: number) {
+	async chatSilent(chatId: number, silent: boolean) {
 		const chat = await ChatModel.findOneAndUpdate(
 			{ id: chatId },
 			{
 				silent,
-				gmt,
 			},
 			{
 				new: true,
@@ -65,12 +64,11 @@ class MongoService {
 		return new ChatDto(chat);
 	}
 
-	async chatSubscribe(chatId: number, subscribed: boolean, gmt?: number) {
+	async chatSubscribe(chatId: number, subscribed: boolean) {
 		const chat = await ChatModel.findOneAndUpdate(
 			{ id: chatId },
 			{
 				subscribed,
-				gmt,
 			},
 			{
 				new: true,
@@ -86,20 +84,20 @@ class MongoService {
 		chatId: number,
 		received: string,
 		reset: boolean = false,
-		gmt?: number,
 	) {
 		const chat = await this.getChat(chatId);
 		const chatReceived = reset ? [] : chat.received;
-		const chatGmt = gmt !== undefined ? gmt : chat.gmt;
 
 		const updatedChat = await ChatModel.findOneAndUpdate(
 			{ id: chatId },
 			{
 				received: [...chatReceived, received].map((r) => new Types.ObjectId(r)),
-				lastReceivedDate: new Date(
-					Date.now() - chatGmt * 60 * 1000,
-				).setUTCHours(0, 0, 0, 0),
-				gmt,
+				lastReceivedDate: new Date(Date.now() + 120 * 60 * 1000).setUTCHours(
+					0,
+					0,
+					0,
+					0,
+				),
 			},
 			{
 				new: true,

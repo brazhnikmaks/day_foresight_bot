@@ -4,7 +4,6 @@ export interface IChat {
 	id: number;
 	subscribed: boolean;
 	silent: boolean;
-	gmt: number;
 	lastReceivedDate: Date;
 	received: ObjectId[];
 }

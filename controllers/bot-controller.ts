@@ -22,26 +22,17 @@ class BotController {
 		const {
 			text,
 			chat: { id: chatId },
-			date,
 		} = msg;
-		const gmt = new Date(+`${date}000`).getTimezoneOffset();
-
-		console.log(msg);
-		console.log({ gmt, date: new Date(+`${date}000`) });
 
 		if (text === "/start") {
 			try {
 				await db.connect();
 				try {
-					await db.addChat(chatId, gmt);
+					await db.addChat(chatId);
 
-					let gtmHours = Math.round(10 - gmt / 60) % 24;
-					if (gtmHours < 0) {
-						gtmHours = Math.abs(24 + gtmHours);
-					}
 					await bot.sendMessage(
 						chatId,
-						`Вітаю, Ви запустили щоденні передбачення.\n\nВи можете отримати *одне* передбачення на день (о ${gtmHours}:00).\n\nВи можете *відписатися* від щоденних передбачень.\n\nВи можете *запросити* передбачення раніше запланованого часу.\n\nВи можете налаштувати передбачення *без звуку оповіщення*.\n\nОсь ваше передбачення на сьогодні:`,
+						`Вітаю, Ви запустили щоденні передбачення.\n\nВи можете отримати *одне* передбачення на день (о 12:00).\n\nВи можете *відписатися* від щоденних передбачень.\n\nВи можете *запросити* передбачення раніше запланованого часу.\n\nВи можете налаштувати передбачення *без звуку оповіщення*.\n\nОсь ваше передбачення на сьогодні:`,
 						{
 							parse_mode: "Markdown",
 						},
@@ -55,7 +46,6 @@ class BotController {
 								id: chatId,
 								type: "private",
 							},
-							date,
 						} as Message);
 					} catch (e) {
 						console.error(e);
@@ -63,7 +53,7 @@ class BotController {
 				} catch (e) {
 					try {
 						await db.getChat(chatId);
-						await db.chatSubscribe(chatId, true, gmt);
+						await db.chatSubscribe(chatId, true);
 						return await bot.sendMessage(
 							chatId,
 							`Я вже знаю про вас все. Ви знову підписані на щоденні передбачення.`,
@@ -81,7 +71,7 @@ class BotController {
 		}
 
 		if (text === "/foresight") {
-			const dateNow = new Date(Date.now() - gmt * 60 * 1000).setUTCHours(
+			const dateNow = new Date(Date.now() + 120 * 60 * 1000).setUTCHours(
 				0,
 				0,
 				0,
@@ -113,11 +103,11 @@ class BotController {
 					let foresight: ForesightDto;
 					if (!notReceivedForesights.length) {
 						foresight = foresights[getRandom(foresights.length)];
-						await db.updateChatReceived(chatId, foresight.id, true, gmt);
+						await db.updateChatReceived(chatId, foresight.id, true);
 					} else {
 						foresight =
 							notReceivedForesights[getRandom(notReceivedForesights.length)];
-						await db.updateChatReceived(chatId, foresight.id, false, gmt);
+						await db.updateChatReceived(chatId, foresight.id, false);
 					}
 
 					return await bot.sendMessage(chatId, `🥠 ${foresight.text}`);
@@ -136,7 +126,7 @@ class BotController {
 					const { subscribed } = await db.getChat(chatId);
 					const newSub = !subscribed;
 
-					await db.chatSubscribe(chatId, newSub, gmt);
+					await db.chatSubscribe(chatId, newSub);
 
 					return await bot.sendMessage(
 						chatId,
@@ -162,7 +152,7 @@ class BotController {
 					const { silent } = await db.getChat(chatId);
 					const newSilent = !silent;
 
-					await db.chatSilent(chatId, newSilent, gmt);
+					await db.chatSilent(chatId, newSilent);
 
 					return await bot.sendMessage(
 						chatId,
@@ -192,8 +182,8 @@ class BotController {
 				]);
 
 				await Promise.all(
-					chats.map(async ({ id, lastReceivedDate, silent, gmt, received }) => {
-						const dateNow = new Date(Date.now() - gmt * 60 * 1000).setUTCHours(
+					chats.map(async ({ id, lastReceivedDate, silent, received }) => {
+						const dateNow = new Date(Date.now() + 120 * 60 * 1000).setUTCHours(
 							0,
 							0,
 							0,

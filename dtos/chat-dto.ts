@@ -5,7 +5,6 @@ class ChatDto implements IChatDto {
 	id: number;
 	subscribed: boolean;
 	silent: boolean;
-	gmt: number;
 	lastReceivedDate: Date;
 	received: string[];
 
@@ -13,7 +12,6 @@ class ChatDto implements IChatDto {
 		this.id = model.id;
 		this.subscribed = model.subscribed;
 		this.silent = model.silent;
-		this.gmt = model.gmt;
 		this.lastReceivedDate = model.lastReceivedDate;
 		this.received = model.received.map((received) => received.toString());
 	}

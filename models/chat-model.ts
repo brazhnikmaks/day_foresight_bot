@@ -5,7 +5,6 @@ const ChatSchema = new Schema<IChat>({
 	id: { type: Number, unique: true, required: true },
 	subscribed: { type: Boolean, default: true },
 	silent: { type: Boolean, default: false },
-	gmt: { type: Number, default: 0 },
 	lastReceivedDate: { type: Date },
 	received: [{ type: Schema.Types.ObjectId, ref: "Foresight" }],
 });
