@@ -30,6 +30,7 @@ class BotController {
 			chat: { id: chatId },
 		} = msg;
 
+		//start bot
 		if (text === "/start") {
 			try {
 				await db.connect();
@@ -38,7 +39,7 @@ class BotController {
 
 					await bot.sendMessage(
 						chatId,
-						`Вітаю, Ви запустили щоденні передбачення.\n\nВи можете отримати *одне* передбачення на день (о 12:00).\n\nВи можете *відписатися* від щоденних передбачень.\n\nВи можете *запросити* передбачення раніше запланованого часу.\n\nВи можете налаштувати передбачення *без звуку оповіщення*.\n\nОсь ваше передбачення на сьогодні:`,
+						`Вітаю, Ви запустили щоденні передбачення.\n\nВи можете отримати *одне* передбачення на день (о 12:00).\n\nВи можете *відписатися* від щоденних передбачень.\n\nВи можете *запросити* передбачення раніше запланованого часу.\n\nВи можете налаштувати передбачення *без звуку оповіщення*.\n\nВи можете *змінити годину* отримання щоденних передбаченнь.\n\nОсь ваше передбачення на сьогодні:`,
 						{
 							parse_mode: "Markdown",
 						},
@@ -76,6 +77,7 @@ class BotController {
 			}
 		}
 
+		//get foresight
 		if (text === "/foresight") {
 			const dateNow = new Date(Date.now() + 120 * 60 * 1000).setUTCHours(
 				0,
@@ -125,6 +127,7 @@ class BotController {
 			}
 		}
 
+		//change subscribe
 		if (text === "/subscribe") {
 			try {
 				await db.connect();
@@ -151,6 +154,7 @@ class BotController {
 			}
 		}
 
+		//change message silent
 		if (text === "/silent") {
 			try {
 				await db.connect();
