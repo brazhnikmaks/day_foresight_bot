@@ -27,6 +27,7 @@ class BotController {
 		const gmt = new Date(+`${date}000`).getTimezoneOffset();
 
 		console.log(msg);
+		console.log({ gmt, date: new Date(+`${date}000`) });
 
 		if (text === "/start") {
 			try {
