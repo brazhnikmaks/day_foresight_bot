@@ -210,9 +210,16 @@ class BotController {
 							await db.updateChatReceived(id, foresight.id, false);
 						}
 
-						return await bot.sendMessage(id, `🥠 ${foresight.text}`, {
-							disable_notification: silent,
-						});
+						try {
+							await bot.sendMessage(id, `🥠 ${foresight.text}`, {
+								disable_notification: silent,
+							});
+						} catch (e) {
+							// @ts-ignore
+							if (e.response.body.error_code === 403) {
+								await db.chatSubscribe(id, false);
+							}
+						}
 					}),
 				);
 			} catch (e) {}
