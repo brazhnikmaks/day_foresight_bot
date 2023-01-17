@@ -5,14 +5,19 @@ import { getRandom } from "../utils";
 import { ForesightDto } from "../dtos";
 
 class BotController {
+	waitForReply: {
+		[key: number]: "hour";
+	};
+
 	constructor() {
 		bot.setMyCommands([
 			{ command: "/start", description: "Запуск бота" },
 			{ command: "/foresight", description: "Передбачення" },
 			{ command: "/subscribe", description: "Відписатися / Підписатися" },
 			{ command: "/silent", description: "Без звуку / Зі звуком" },
-			{ command: "/time", description: "Змінити годину отримання" },
+			{ command: "/hour", description: "Змінити годину отримання" },
 		]);
+		this.waitForReply = {};
 	}
 
 	static async sendError(chatId: number) {
@@ -20,8 +25,6 @@ class BotController {
 	}
 
 	async onMessage(msg: Message) {
-		console.log(msg);
-
 		const {
 			text,
 			chat: { id: chatId },
@@ -174,7 +177,8 @@ class BotController {
 			}
 		}
 
-		if (text === "/time") {
+		//change time
+		if (text === "/hour") {
 			const timePrompt = await bot.sendMessage(
 				chatId,
 				"Добре, введіть годину отримання від 0 до 23 за українським часовим поясом",
@@ -185,30 +189,34 @@ class BotController {
 					},
 				},
 			);
-			bot.onReplyToMessage(chatId, timePrompt.message_id, async (hourMsg) => {
-				const hour = Math.floor(Number(hourMsg.text!));
-				if (hour < 0 || hour > 23) {
-					return await BotController.sendError(chatId);
-				}
+			return (this.waitForReply[chatId] = "hour");
+		}
 
+		//reply
+		if (this.waitForReply[chatId] === "hour") {
+			const hour = Math.floor(Number(text));
+			if (hour < 0 || hour > 23) {
+				return await BotController.sendError(chatId);
+			}
+
+			try {
+				await db.connect();
 				try {
-					await db.connect();
-					try {
-						await db.chatReceiveHour(chatId, hour);
-						return await bot.sendMessage(
-							chatId,
-							`Час отримання щоденних передбачень змінено на ${hour}:00 за українським часовим поясом`,
-							{
-								parse_mode: "Markdown",
-							},
-						);
-					} catch (e) {
-						await BotController.sendError(chatId);
-					}
+					await db.chatReceiveHour(chatId, hour);
+					delete this.waitForReply[chatId];
+					return await bot.sendMessage(
+						chatId,
+						`Час отримання щоденних передбачень змінено на ${hour}:00 за українським часовим поясом`,
+						{
+							parse_mode: "Markdown",
+						},
+					);
 				} catch (e) {
 					await BotController.sendError(chatId);
 				}
-			});
+			} catch (e) {
+				await BotController.sendError(chatId);
+			}
 		}
 	}
 
