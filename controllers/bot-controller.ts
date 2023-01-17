@@ -20,6 +20,8 @@ class BotController {
 	}
 
 	async onMessage(msg: Message) {
+		console.log(msg);
+
 		const {
 			text,
 			chat: { id: chatId },
