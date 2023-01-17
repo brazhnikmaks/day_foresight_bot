@@ -26,16 +26,21 @@ class BotController {
 		} = msg;
 		const gmt = new Date(+`${date}000`).getTimezoneOffset();
 
+		console.log(msg);
+
 		if (text === "/start") {
 			try {
 				await db.connect();
 				try {
 					await db.addChat(chatId, gmt);
+
+					let gtmHours = Math.round(10 - gmt / 60) % 24;
+					if (gtmHours < 0) {
+						gtmHours = Math.abs(24 + gtmHours);
+					}
 					await bot.sendMessage(
 						chatId,
-						`Вітаю, Ви запустили щоденні передбачення.\n\nВи можете отримати *одне* передбачення на день (о ${Math.round(
-							10 - gmt / 60,
-						)}:00).\n\nВи можете *відписатися* від щоденних передбачень.\n\nВи можете *запросити* передбачення раніше запланованого часу.\n\nВи можете налаштувати передбачення *без звуку оповіщення*.\n\nОсь ваше передбачення на сьогодні:`,
+						`Вітаю, Ви запустили щоденні передбачення.\n\nВи можете отримати *одне* передбачення на день (о ${gtmHours}:00).\n\nВи можете *відписатися* від щоденних передбачень.\n\nВи можете *запросити* передбачення раніше запланованого часу.\n\nВи можете налаштувати передбачення *без звуку оповіщення*.\n\nОсь ваше передбачення на сьогодні:`,
 						{
 							parse_mode: "Markdown",
 						},
@@ -49,7 +54,7 @@ class BotController {
 								id: chatId,
 								type: "private",
 							},
-							date: +Date.now().toString().slice(0, -3),
+							date,
 						} as Message);
 					} catch (e) {
 						console.error(e);
