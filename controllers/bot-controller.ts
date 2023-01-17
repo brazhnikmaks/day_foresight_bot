@@ -59,15 +59,25 @@ class BotController {
 					}
 				} catch (e) {
 					try {
-						await db.getChat(chatId);
-						await db.chatSubscribe(chatId, true);
-						return await bot.sendMessage(
-							chatId,
-							`Я вже знаю про вас все. Ви знову підписані на щоденні передбачення.`,
-							{
-								parse_mode: "Markdown",
-							},
-						);
+						const { subscribed } = await db.getChat(chatId);
+						if (subscribed) {
+							return await bot.sendMessage(
+								chatId,
+								`Я вже знаю про вас все. Чекайте на наступне передбачення.`,
+								{
+									parse_mode: "Markdown",
+								},
+							);
+						} else {
+							await db.chatSubscribe(chatId, true);
+							return await bot.sendMessage(
+								chatId,
+								`Я вже знаю про вас все. Ви знову підписані на щоденні передбачення.`,
+								{
+									parse_mode: "Markdown",
+								},
+							);
+						}
 					} catch (e) {
 						await BotController.sendError(chatId);
 					}
