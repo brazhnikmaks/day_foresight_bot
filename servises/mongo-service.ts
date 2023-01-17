@@ -108,6 +108,22 @@ class MongoService {
 		}
 		return new ChatDto(updatedChat);
 	}
+
+	async chatReceiveHour(chatId: number, hour: number) {
+		const chat = await ChatModel.findOneAndUpdate(
+			{ id: chatId },
+			{
+				receiveHour: hour,
+			},
+			{
+				new: true,
+			},
+		);
+		if (!chat) {
+			throw new Error("No chat founded");
+		}
+		return new ChatDto(chat);
+	}
 }
 
 export default new MongoService();

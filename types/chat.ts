@@ -6,6 +6,7 @@ export interface IChat {
 	silent: boolean;
 	lastReceivedDate: Date;
 	received: ObjectId[];
+	receiveHour: number;
 }
 
 export interface IChatDto extends Omit<IChat, "received"> {

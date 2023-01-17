@@ -7,6 +7,7 @@ class ChatDto implements IChatDto {
 	silent: boolean;
 	lastReceivedDate: Date;
 	received: string[];
+	receiveHour: number;
 
 	constructor(model: HydratedDocument<IChat>) {
 		this.id = model.id;
@@ -14,6 +15,7 @@ class ChatDto implements IChatDto {
 		this.silent = model.silent;
 		this.lastReceivedDate = model.lastReceivedDate;
 		this.received = model.received.map((received) => received.toString());
+		this.receiveHour = model.receiveHour;
 	}
 }
 

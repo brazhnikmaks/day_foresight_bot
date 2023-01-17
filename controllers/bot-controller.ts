@@ -11,6 +11,7 @@ class BotController {
 			{ command: "/foresight", description: "Передбачення" },
 			{ command: "/subscribe", description: "Відписатися / Підписатися" },
 			{ command: "/silent", description: "Без звуку / Зі звуком" },
+			{ command: "/time", description: "Змінити годину отримання" },
 		]);
 	}
 
@@ -170,28 +171,63 @@ class BotController {
 				await BotController.sendError(chatId);
 			}
 		}
+
+		if (text === "/time") {
+			const timePrompt = await bot.sendMessage(
+				chatId,
+				"Добре, введіть годину отримання від 0 до 23 за українським часовим поясом",
+				{
+					parse_mode: "Markdown",
+					reply_markup: {
+						force_reply: true,
+					},
+				},
+			);
+			bot.onReplyToMessage(chatId, timePrompt.message_id, async (hourMsg) => {
+				const hour = Math.floor(Number(hourMsg.text!));
+				if (hour < 0 || hour > 23) {
+					return await BotController.sendError(chatId);
+				}
+
+				try {
+					await db.connect();
+					try {
+						await db.chatReceiveHour(chatId, hour);
+						return await bot.sendMessage(
+							chatId,
+							`Час отримання щоденних передбачень змінено на ${hour}:00 за українським часовим поясом`,
+							{
+								parse_mode: "Markdown",
+							},
+						);
+					} catch (e) {
+						await BotController.sendError(chatId);
+					}
+				} catch (e) {
+					await BotController.sendError(chatId);
+				}
+			});
+		}
 	}
 
 	async dailyForesight() {
+		const dateNow = new Date(Date.now() + 120 * 60 * 1000);
+		const currentHour = dateNow.getHours();
+		const beginDateTime = dateNow.setUTCHours(0, 0, 0, 0);
+
 		try {
 			await db.connect();
 			try {
 				const [foresights, chats] = await Promise.all([
 					db.getForesights(),
-					db.getChats({ subscribed: true }),
+					db.getChats({ subscribed: true, receiveHour: currentHour }),
 				]);
 
 				await Promise.all(
 					chats.map(async ({ id, lastReceivedDate, silent, received }) => {
-						const dateNow = new Date(Date.now() + 120 * 60 * 1000).setUTCHours(
-							0,
-							0,
-							0,
-							0,
-						);
 						const isAlreadyReceived =
 							lastReceivedDate &&
-							dateNow - new Date(lastReceivedDate).getTime() < 86400000;
+							beginDateTime - new Date(lastReceivedDate).getTime() < 86400000;
 						if (isAlreadyReceived) return;
 
 						const notReceivedForesights = foresights.filter(
