@@ -7,6 +7,6 @@ const dailyHandler: Handler = async () => {
 	return { statusCode: 200 };
 };
 
-const handler = schedule("12 0 * * *", dailyHandler);
+const handler = schedule("14 0 * * *", dailyHandler);
 
 export { handler };
