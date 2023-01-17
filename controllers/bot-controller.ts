@@ -183,8 +183,8 @@ class BotController {
 					db.getChats({ subscribed: true }),
 				]);
 
-				chats.forEach(
-					async ({ id, lastReceivedDate, silent, gmt, received }) => {
+				await Promise.all(
+					chats.map(async ({ id, lastReceivedDate, silent, gmt, received }) => {
 						const dateNow = new Date(Date.now() - gmt * 60 * 1000).setUTCHours(
 							0,
 							0,
@@ -213,7 +213,7 @@ class BotController {
 						return await bot.sendMessage(id, `🥠 ${foresight.text}`, {
 							disable_notification: silent,
 						});
-					},
+					}),
 				);
 			} catch (e) {}
 		} catch (e) {}
