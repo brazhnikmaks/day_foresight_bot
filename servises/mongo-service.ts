@@ -1,8 +1,8 @@
 import { config } from "dotenv";
 import mongoose, { Types, FilterQuery } from "mongoose";
 import { User } from "node-telegram-bot-api";
-import { ForesightModel, ChatModel } from "../models";
-import { ForesightDto, ChatDto } from "../dtos";
+import { ForesightModel, ChatModel, LogModel } from "../models";
+import { ForesightDto, ChatDto, LogDto } from "../dtos";
 import { IChat } from "../types/chat";
 
 config();
@@ -148,6 +148,21 @@ class MongoService {
 			throw new Error("No chat founded");
 		}
 		return new ChatDto(chat);
+	}
+
+	async addLog(
+		user: string,
+		action: string,
+		message: string,
+		username?: string,
+	) {
+		const log = await LogModel.create({
+			user,
+			action,
+			message,
+			userLink: username ? `https://t.me/${username}` : undefined,
+		});
+		return new LogDto(log);
 	}
 }
 

@@ -46,6 +46,18 @@ class BotController {
 						},
 					);
 
+					//log
+					await db.addLog(
+						from?.first_name
+							? `${from?.first_name}${
+									from?.last_name ? ` ${from?.last_name}` : ""
+							  }`
+							: chatId.toString(),
+						"/start",
+						"Приєднався до бота",
+						from?.username,
+					);
+
 					//trigger first foresight
 					try {
 						await this.onMessage({
@@ -55,6 +67,8 @@ class BotController {
 								type: "private",
 							},
 						} as Message);
+
+						return;
 					} catch (e) {
 						console.error(e);
 					}
@@ -65,22 +79,24 @@ class BotController {
 						} catch (e) {}
 						const { subscribed } = await db.getChat(chatId);
 						if (subscribed) {
-							return await bot.sendMessage(
+							await bot.sendMessage(
 								chatId,
 								`Я вже знаю про вас все. Чекайте на наступне передбачення.`,
 								{
 									parse_mode: "Markdown",
 								},
 							);
+							return;
 						} else {
 							await db.chatSubscribe(chatId, true);
-							return await bot.sendMessage(
+							await bot.sendMessage(
 								chatId,
 								`Я вже знаю про вас все. Ви знову підписані на щоденні передбачення.`,
 								{
 									parse_mode: "Markdown",
 								},
 							);
+							return;
 						}
 					} catch (e) {
 						await BotController.sendError(chatId);
@@ -139,7 +155,18 @@ class BotController {
 						await db.updateChatReceived(chatId, foresight.id, false);
 					}
 
-					return await bot.sendMessage(chatId, `🥠 ${foresight.text}`);
+					await bot.sendMessage(chatId, `🥠 ${foresight.text}`);
+
+					//log
+					await db.addLog(
+						firstName
+							? `${firstName}${lastName ? ` ${lastName}` : ""}`
+							: chatId.toString(),
+						"/foresight",
+						foresight.text,
+						username,
+					);
+					return;
 				} catch (e) {
 					await BotController.sendError(chatId);
 				}
@@ -156,12 +183,13 @@ class BotController {
 					if (from) await this.catchUserData(chatId, from);
 				} catch (e) {}
 				try {
-					const { subscribed } = await db.getChat(chatId);
+					const { subscribed, firstName, lastName, username } =
+						await db.getChat(chatId);
 					const newSub = !subscribed;
 
 					await db.chatSubscribe(chatId, newSub);
 
-					return await bot.sendMessage(
+					await bot.sendMessage(
 						chatId,
 						newSub
 							? "Ви підписалися на щоденні передбачення."
@@ -170,6 +198,18 @@ class BotController {
 							parse_mode: "Markdown",
 						},
 					);
+
+					//log
+					await db.addLog(
+						firstName
+							? `${firstName}${lastName ? ` ${lastName}` : ""}`
+							: chatId.toString(),
+						"/subscribe",
+						newSub ? "Підписався" : "Відписався",
+						username,
+					);
+
+					return;
 				} catch (e) {
 					await BotController.sendError(chatId);
 				}
@@ -186,12 +226,14 @@ class BotController {
 					if (from) await this.catchUserData(chatId, from);
 				} catch (e) {}
 				try {
-					const { silent } = await db.getChat(chatId);
+					const { silent, firstName, lastName, username } = await db.getChat(
+						chatId,
+					);
 					const newSilent = !silent;
 
 					await db.chatSilent(chatId, newSilent);
 
-					return await bot.sendMessage(
+					await bot.sendMessage(
 						chatId,
 						newSilent
 							? "🔇 Ваші пердбачення будуть надходити без звуку."
@@ -200,6 +242,18 @@ class BotController {
 							parse_mode: "Markdown",
 						},
 					);
+
+					//log
+					await db.addLog(
+						firstName
+							? `${firstName}${lastName ? ` ${lastName}` : ""}`
+							: chatId.toString(),
+						"/silent",
+						newSilent ? "Прибрав звук" : "Повернув звук",
+						username,
+					);
+
+					return;
 				} catch (e) {
 					await BotController.sendError(chatId);
 				}
@@ -220,7 +274,8 @@ class BotController {
 					},
 				},
 			);
-			return (this.waitForReply[chatId] = "hour");
+			this.waitForReply[chatId] = "hour";
+			return;
 		}
 
 		//reply
@@ -233,15 +288,30 @@ class BotController {
 			try {
 				await db.connect();
 				try {
-					await db.chatReceiveHour(chatId, hour);
+					const { firstName, lastName, username } = await db.chatReceiveHour(
+						chatId,
+						hour,
+					);
 					delete this.waitForReply[chatId];
-					return await bot.sendMessage(
+					await bot.sendMessage(
 						chatId,
 						`Час отримання щоденних передбачень змінено на ${hour}:00 за українським часовим поясом`,
 						{
 							parse_mode: "Markdown",
 						},
 					);
+
+					//log
+					await db.addLog(
+						firstName
+							? `${firstName}${lastName ? ` ${lastName}` : ""}`
+							: chatId.toString(),
+						"/hour",
+						`Новий час оповіщень: ${hour}:00`,
+						username,
+					);
+
+					return;
 				} catch (e) {
 					await BotController.sendError(chatId);
 				}
@@ -278,9 +348,15 @@ class BotController {
 
 				const foresights = await db.getForesights();
 
+				//log
+				let logMessage: string = "";
+
 				await Promise.all(
 					notReceivedChats.map(
-						async ({ id, lastReceivedDate, silent, received }) => {
+						async (
+							{ id, lastReceivedDate, silent, received, firstName, lastName },
+							index,
+						) => {
 							const isAlreadyReceived =
 								lastReceivedDate &&
 								beginDateTime - new Date(lastReceivedDate).getTime() < 86400000;
@@ -306,6 +382,13 @@ class BotController {
 								await bot.sendMessage(id, `🥠 ${foresight.text}`, {
 									disable_notification: silent,
 								});
+
+								//log
+								logMessage += `${index > 0 ? "\n" : ""}${
+									firstName
+										? `${firstName}${lastName ? ` ${lastName}` : ""}`
+										: id.toString()
+								}: ${foresight.text}`;
 							} catch (e) {
 								// @ts-ignore
 								if (e.response.body.error_code === 403) {
@@ -315,6 +398,11 @@ class BotController {
 						},
 					),
 				);
+
+				//log
+				await db.addLog("bot", "hour shedule", logMessage, "day_foresight_bot");
+
+				return;
 			} catch (e) {}
 		} catch (e) {}
 	}
