@@ -1,5 +1,6 @@
 import { config } from "dotenv";
-import mongoose, { Types } from "mongoose";
+import mongoose, { Types, FilterQuery } from "mongoose";
+import { User } from "node-telegram-bot-api";
 import { ForesightModel, ChatModel } from "../models";
 import { ForesightDto, ChatDto } from "../dtos";
 import { IChat } from "../types/chat";
@@ -27,8 +28,8 @@ class MongoService {
 		return foresights.map((foresight) => new ForesightDto(foresight));
 	}
 
-	async getChats(fillter: Partial<IChat> = {}) {
-		const chats = await ChatModel.find(fillter);
+	async getChats(filter: FilterQuery<IChat>) {
+		const chats = await ChatModel.find(filter);
 		if (!chats.length) {
 			throw new Error("No chats founded");
 		}
@@ -43,8 +44,14 @@ class MongoService {
 		return new ChatDto(chat);
 	}
 
-	async addChat(chatId: number) {
-		const chat = await ChatModel.create({ id: chatId });
+	async addChat(chatId: number, from?: User) {
+		const chat = await ChatModel.create({
+			id: chatId,
+			firstName: from?.first_name,
+			lastName: from?.last_name,
+			username: from?.username,
+			role: "member",
+		});
 		return new ChatDto(chat);
 	}
 
@@ -114,6 +121,24 @@ class MongoService {
 			{ id: chatId },
 			{
 				receiveHour: hour,
+			},
+			{
+				new: true,
+			},
+		);
+		if (!chat) {
+			throw new Error("No chat founded");
+		}
+		return new ChatDto(chat);
+	}
+
+	async addChatUser(chatId: number, from: User) {
+		const chat = await ChatModel.findOneAndUpdate(
+			{ id: chatId },
+			{
+				firstName: from.first_name,
+				lastName: from.last_name,
+				username: from.username,
 			},
 			{
 				new: true,

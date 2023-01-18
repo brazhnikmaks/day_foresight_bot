@@ -8,6 +8,9 @@ const ChatSchema = new Schema<IChat>({
 	lastReceivedDate: { type: Date },
 	received: [{ type: Schema.Types.ObjectId, ref: "Foresight" }],
 	receiveHour: { type: Number, min: 0, max: 23, default: 12 },
+	firstName: { type: String },
+	lastName: { type: String },
+	username: { type: String },
 });
 
 export default model<IChat>("Chat", ChatSchema);

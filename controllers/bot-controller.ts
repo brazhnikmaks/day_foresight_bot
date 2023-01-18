@@ -1,4 +1,4 @@
-import { Message } from "node-telegram-bot-api";
+import { Message, User } from "node-telegram-bot-api";
 import bot from "../servises/telefram-service";
 import db from "../servises/mongo-service";
 import { getRandom } from "../utils";
@@ -28,6 +28,7 @@ class BotController {
 		const {
 			text,
 			chat: { id: chatId },
+			from,
 		} = msg;
 
 		//start bot
@@ -35,7 +36,7 @@ class BotController {
 			try {
 				await db.connect();
 				try {
-					await db.addChat(chatId);
+					await db.addChat(chatId, from);
 
 					await bot.sendMessage(
 						chatId,
@@ -59,6 +60,9 @@ class BotController {
 					}
 				} catch (e) {
 					try {
+						try {
+							if (from) await this.catchUserData(chatId, from);
+						} catch (e) {}
 						const { subscribed } = await db.getChat(chatId);
 						if (subscribed) {
 							return await bot.sendMessage(
@@ -99,9 +103,16 @@ class BotController {
 			try {
 				await db.connect();
 				try {
-					const { lastReceivedDate: chatDate, received } = await db.getChat(
-						chatId,
-					);
+					if (from) await this.catchUserData(chatId, from);
+				} catch (e) {}
+				try {
+					const {
+						lastReceivedDate: chatDate,
+						received,
+						firstName,
+						lastName,
+						username,
+					} = await db.getChat(chatId);
 
 					const isAlreadyReceived =
 						chatDate && dateNow - new Date(chatDate).getTime() < 86400000;
@@ -142,6 +153,9 @@ class BotController {
 			try {
 				await db.connect();
 				try {
+					if (from) await this.catchUserData(chatId, from);
+				} catch (e) {}
+				try {
 					const { subscribed } = await db.getChat(chatId);
 					const newSub = !subscribed;
 
@@ -169,6 +183,9 @@ class BotController {
 			try {
 				await db.connect();
 				try {
+					if (from) await this.catchUserData(chatId, from);
+				} catch (e) {}
+				try {
 					const { silent } = await db.getChat(chatId);
 					const newSilent = !silent;
 
@@ -193,7 +210,7 @@ class BotController {
 
 		//change time
 		if (text === "/hour") {
-			const timePrompt = await bot.sendMessage(
+			await bot.sendMessage(
 				chatId,
 				"Добре, введіть годину отримання від 0 до 23 за українським часовим поясом",
 				{
@@ -300,6 +317,10 @@ class BotController {
 				);
 			} catch (e) {}
 		} catch (e) {}
+	}
+
+	async catchUserData(chatId: number, from: User) {
+		await db.addChatUser(chatId, from);
 	}
 }
 
