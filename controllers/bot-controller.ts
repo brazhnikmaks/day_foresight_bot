@@ -74,9 +74,6 @@ class BotController {
 					}
 				} catch (e) {
 					try {
-						try {
-							if (from) await this.catchUserData(chatId, from);
-						} catch (e) {}
 						const { subscribed } = await db.getChat(chatId);
 						if (subscribed) {
 							await bot.sendMessage(
@@ -118,9 +115,6 @@ class BotController {
 
 			try {
 				await db.connect();
-				try {
-					if (from) await this.catchUserData(chatId, from);
-				} catch (e) {}
 				try {
 					const {
 						lastReceivedDate: chatDate,
@@ -180,9 +174,6 @@ class BotController {
 			try {
 				await db.connect();
 				try {
-					if (from) await this.catchUserData(chatId, from);
-				} catch (e) {}
-				try {
 					const { subscribed, firstName, lastName, username } =
 						await db.getChat(chatId);
 					const newSub = !subscribed;
@@ -222,9 +213,6 @@ class BotController {
 		if (text === "/silent") {
 			try {
 				await db.connect();
-				try {
-					if (from) await this.catchUserData(chatId, from);
-				} catch (e) {}
 				try {
 					const { silent, firstName, lastName, username } = await db.getChat(
 						chatId,
@@ -405,10 +393,6 @@ class BotController {
 				return;
 			} catch (e) {}
 		} catch (e) {}
-	}
-
-	async catchUserData(chatId: number, from: User) {
-		await db.addChatUser(chatId, from);
 	}
 }
 

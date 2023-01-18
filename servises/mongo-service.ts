@@ -50,7 +50,6 @@ class MongoService {
 			firstName: from?.first_name,
 			lastName: from?.last_name,
 			username: from?.username,
-			role: "member",
 		});
 		return new ChatDto(chat);
 	}
@@ -121,24 +120,6 @@ class MongoService {
 			{ id: chatId },
 			{
 				receiveHour: hour,
-			},
-			{
-				new: true,
-			},
-		);
-		if (!chat) {
-			throw new Error("No chat founded");
-		}
-		return new ChatDto(chat);
-	}
-
-	async addChatUser(chatId: number, from: User) {
-		const chat = await ChatModel.findOneAndUpdate(
-			{ id: chatId },
-			{
-				firstName: from.first_name,
-				lastName: from.last_name,
-				username: from.username,
 			},
 			{
 				new: true,
