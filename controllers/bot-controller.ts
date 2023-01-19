@@ -26,6 +26,7 @@ class BotController {
 			{ command: "/mute", description: "🔇 Без звуку" },
 			{ command: "/unmute", description: "🔈 Зі звуком" },
 			{ command: "/hour", description: "🕛 Година отримання" },
+			{ command: "/help", description: "📄 Допомога" },
 		]);
 	}
 
@@ -83,8 +84,9 @@ class BotController {
 
 	async onHelp(chatId: number) {
 		let hour = 12;
+		let chat = {} as ChatDto;
 		try {
-			const chat = await db.getChat(chatId);
+			chat = await db.getChat(chatId);
 			hour = chat.receiveHour;
 		} catch (e) {}
 
@@ -94,6 +96,7 @@ class BotController {
 			chatId,
 			`Ви можете отримати *одне* передбачення на день (о ${timeIcon} ${hour}:00 за українським часовим поясом).\n\n/foresight - 🥠 Ви можете *запросити* передбачення раніше запланованого часу (але якщо ще не отримали)\n\n/unsubscribe - 🔕 Ви можете *відписатися* від щоденних передбачень.\n/subscribe - 🔔 Ви можете *відновити* підписку.\n\n/mute - 🔇 Ви можете налаштувати передбачення *без звуку оповіщення*.\n/unmute - 🔈 та *зі звуком*.\n\n/hour - ${timeIcon} Ви можете *змінити годину* отримання щоденних передбачень.`,
 			{
+				...(chat.id ? this.setReplyKeyboard(chat) : {}),
 				parse_mode: "Markdown",
 			},
 		);
@@ -397,6 +400,9 @@ class BotController {
 				case "/hour":
 				case "Змінити годину":
 					await this.onHour(msg);
+					return;
+				case "/help":
+					await this.onHelp(chatId);
 					return;
 				default:
 					//wait reply
