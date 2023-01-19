@@ -1,6 +1,6 @@
 import bot from "./servises/telefram-service";
 import BotController from "./controllers/bot-controller";
 
-bot.on("message", BotController.onMessage.bind(BotController));
+bot.on("message", BotController.onAction.bind(BotController));
 
-BotController.foresightForAll();
+BotController.foresightForAll.bind(BotController)();
