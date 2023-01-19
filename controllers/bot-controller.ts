@@ -1,7 +1,11 @@
-import { Message } from "node-telegram-bot-api";
+import {
+	Message,
+	SendMessageOptions,
+	KeyboardButton,
+} from "node-telegram-bot-api";
 import bot from "../servises/telefram-service";
 import db from "../servises/mongo-service";
-import { getRandom } from "../utils";
+import { getRandom, getTimeIcon } from "../utils";
 import { ChatDto, ForesightDto } from "../dtos";
 
 class BotController {
@@ -23,6 +27,42 @@ class BotController {
 			{ command: "/unmute", description: "🔈 Зі звуком" },
 			{ command: "/hour", description: "🕛 Година отримання" },
 		]);
+	}
+
+	setReplyKeyboard(chat: ChatDto): SendMessageOptions {
+		const { receiveHour, subscribed, silent } = chat;
+
+		const keyboard: KeyboardButton[][] = [];
+
+		keyboard.push(
+			[
+				{
+					text: "🥠 Передбачення",
+				},
+			],
+			[
+				{
+					text: subscribed ? "🔕 Відписатися" : "🔔 Підписатися",
+				},
+				{
+					text: silent ? "🔈 Зі звуком" : "🔇 Без звуку",
+				},
+			],
+			[
+				{
+					text: `${getTimeIcon(
+						receiveHour,
+					)} Змінити годину (${receiveHour}:00)`,
+				},
+			],
+		);
+
+		return {
+			reply_markup: {
+				resize_keyboard: true,
+				keyboard,
+			},
+		};
 	}
 
 	async sendError(chatId: number) {
@@ -48,9 +88,11 @@ class BotController {
 			hour = chat.receiveHour;
 		} catch (e) {}
 
+		const timeIcon = getTimeIcon(hour);
+
 		return await bot.sendMessage(
 			chatId,
-			`Ви можете отримати *одне* передбачення на день (о ${hour}:00 за українським часовим поясом).\n\n/foresight - 🥠 Ви можете *запросити* передбачення раніше запланованого часу (але якщо ще не отримали)\n\n/unsubscribe - 🔕 Ви можете *відписатися* від щоденних передбачень.\n/subscribe - 🔔 Ви можете *відновити* підписку.\n\n/mute - 🔇 Ви можете налаштувати передбачення *без звуку оповіщення*.\n/unmute - 🔈 та *зі звуком*.\n\n/hour - 🕛 Ви можете *змінити годину* отримання щоденних передбачень.`,
+			`Ви можете отримати *одне* передбачення на день (о ${timeIcon} ${hour}:00 за українським часовим поясом).\n\n/foresight - 🥠 Ви можете *запросити* передбачення раніше запланованого часу (але якщо ще не отримали)\n\n/unsubscribe - 🔕 Ви можете *відписатися* від щоденних передбачень.\n/subscribe - 🔔 Ви можете *відновити* підписку.\n\n/mute - 🔇 Ви можете налаштувати передбачення *без звуку оповіщення*.\n/unmute - 🔈 та *зі звуком*.\n\n/hour - ${timeIcon} Ви можете *змінити годину* отримання щоденних передбачень.`,
 			{
 				parse_mode: "Markdown",
 			},
@@ -69,6 +111,7 @@ class BotController {
 			await bot.sendMessage(
 				chatId,
 				`Вітаю, Ви запустили щоденні передбачення.`,
+				this.setReplyKeyboard(chat),
 			);
 
 			await this.onHelp(chatId);
@@ -96,11 +139,13 @@ class BotController {
 			await this.addLog(chat, "/start", "Приєднався до бота");
 		} catch (e) {
 			try {
-				const { subscribed } = await db.getChat(chatId);
+				const chat = await db.getChat(chatId);
+				const { subscribed } = chat;
 				if (subscribed) {
 					await bot.sendMessage(
 						chatId,
 						`Я вже знаю про вас все. Чекайте на наступне передбачення.`,
+						this.setReplyKeyboard(chat),
 					);
 					await this.setCommands();
 				} else {
@@ -108,6 +153,7 @@ class BotController {
 					await bot.sendMessage(
 						chatId,
 						`Я вже знаю про вас все. Ви знову підписані на щоденні передбачення.`,
+						this.setReplyKeyboard(chat),
 					);
 					await this.setCommands();
 				}
@@ -130,7 +176,7 @@ class BotController {
 		);
 
 		try {
-			const chat = await db.getChat(chatId);
+			let chat = await db.getChat(chatId);
 			const { lastReceivedDate: chatDate, received } = chat;
 
 			const isAlreadyReceived =
@@ -139,6 +185,7 @@ class BotController {
 				return await bot.sendMessage(
 					chatId,
 					"🚫 Один день - одне передбачення.",
+					this.setReplyKeyboard(chat),
 				);
 			}
 
@@ -153,14 +200,18 @@ class BotController {
 
 			if (!notReceivedForesights.length) {
 				foresight = foresights[getRandom(foresights.length)];
-				await db.updateChatReceived(chatId, foresight.id, true);
+				chat = await db.updateChatReceived(chatId, foresight.id, true);
 			} else {
 				foresight =
 					notReceivedForesights[getRandom(notReceivedForesights.length)];
-				await db.updateChatReceived(chatId, foresight.id, false);
+				chat = await db.updateChatReceived(chatId, foresight.id, false);
 			}
 
-			await bot.sendMessage(chatId, `🥠 ${foresight.text}`);
+			await bot.sendMessage(
+				chatId,
+				`🥠 ${foresight.text}`,
+				this.setReplyKeyboard(chat),
+			);
 
 			//log
 			await this.addLog(chat, "/foresight", foresight.text);
@@ -175,7 +226,7 @@ class BotController {
 		} = msg;
 
 		try {
-			const chat = await db.getChat(chatId);
+			let chat = await db.getChat(chatId);
 
 			if (chat.subscribed === subscribe) {
 				return await bot.sendMessage(
@@ -183,16 +234,18 @@ class BotController {
 					subscribe
 						? "🔔 Ви вже підписані на щоденні передбачення."
 						: "🔕 Ви вже відписані від щоденних передбачень",
+					this.setReplyKeyboard(chat),
 				);
 			}
 
-			await db.chatSubscribe(chatId, subscribe);
+			chat = await db.chatSubscribe(chatId, subscribe);
 
 			await bot.sendMessage(
 				chatId,
 				subscribe
 					? "🔔 Ви підписалися на щоденні передбачення."
 					: `🔕 Ви відписались від щоденних передбачень. Ви можете отримати передбачення в "Меню", але один раз на день.`,
+				this.setReplyKeyboard(chat),
 			);
 
 			//log
@@ -214,7 +267,7 @@ class BotController {
 		} = msg;
 
 		try {
-			const chat = await db.getChat(chatId);
+			let chat = await db.getChat(chatId);
 
 			if (chat.silent === mute) {
 				return await bot.sendMessage(
@@ -222,16 +275,18 @@ class BotController {
 					mute
 						? "🔇 Ви вже отримуєте пердбачення без звуку"
 						: "🔈 Ви вже отримуєте пердбачення зі звуком",
+					this.setReplyKeyboard(chat),
 				);
 			}
 
-			await db.chatSilent(chatId, mute);
+			chat = await db.chatSilent(chatId, mute);
 
 			await bot.sendMessage(
 				chatId,
 				mute
 					? "🔇 Ваші пердбачення будуть надходити без звуку."
 					: "🔈 Ваші пердбачення будуть надходити зі звуком.",
+				this.setReplyKeyboard(chat),
 			);
 
 			//log
@@ -259,6 +314,7 @@ class BotController {
 				parse_mode: "Markdown",
 				reply_markup: {
 					force_reply: true,
+					remove_keyboard: true,
 				},
 			},
 		);
@@ -277,13 +333,15 @@ class BotController {
 			return await this.sendError(chatId);
 		}
 
+		const timeIcon = getTimeIcon(hour);
+
 		try {
 			const chat = await db.chatReceiveHour(chatId, hour);
-
 			delete this.waitForReply[chatId];
 			await bot.sendMessage(
 				chatId,
-				`Час отримання щоденних передбачень змінено на ${hour}:00 за українським часовим поясом`,
+				`${timeIcon} Час отримання щоденних передбачень змінено на ${hour}:00 за українським часовим поясом`,
+				this.setReplyKeyboard(chat),
 			);
 
 			//log
@@ -296,10 +354,12 @@ class BotController {
 	}
 
 	async onAction(msg: Message) {
-		const {
+		let {
 			text,
 			chat: { id: chatId },
 		} = msg;
+
+		text = text?.replace(/^[\s\S]*?(Змінити годину)[\s\S]*?$/, "$1");
 
 		try {
 			await db.connect();
@@ -310,33 +370,36 @@ class BotController {
 					return;
 				//get foresight
 				case "/foresight":
+				case "🥠 Передбачення":
 					await this.onForesight(msg);
 					return;
 				//subscribe
 				case "/subscribe":
+				case "🔔 Підписатися":
 					await this.onSubscribe(msg, true);
 					return;
 				//unsubscribe
 				case "/unsubscribe":
+				case "🔕 Відписатися":
 					await this.onSubscribe(msg, false);
 					return;
 				//mute
 				case "/mute":
+				case "🔇 Без звуку":
 					await this.onMute(msg, true);
 					return;
 				//unmute
 				case "/unmute":
+				case "🔈 Зі звуком":
 					await this.onMute(msg, false);
 					return;
 				//chanhe hour
 				case "/hour":
-					await this.onHour(msg);
-					return;
-				//wait reply
-				case "/hour":
+				case "Змінити годину":
 					await this.onHour(msg);
 					return;
 				default:
+					//wait reply
 					if (this.waitForReply[chatId] === "hour") {
 						await this.onHourReply(msg);
 						return;
@@ -395,19 +458,21 @@ class BotController {
 							);
 
 							let foresight: ForesightDto;
+							let chat: ChatDto;
 							if (!notReceivedForesights.length) {
 								foresight = foresights[getRandom(foresights.length)];
-								await db.updateChatReceived(id, foresight.id, true);
+								chat = await db.updateChatReceived(id, foresight.id, true);
 							} else {
 								foresight =
 									notReceivedForesights[
 										getRandom(notReceivedForesights.length)
 									];
-								await db.updateChatReceived(id, foresight.id, false);
+								chat = await db.updateChatReceived(id, foresight.id, false);
 							}
 
 							try {
 								await bot.sendMessage(id, `🥠 ${foresight.text}`, {
+									...this.setReplyKeyboard(chat),
 									disable_notification: silent,
 								});
 
