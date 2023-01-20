@@ -450,10 +450,14 @@ class BotController {
 
 				await Promise.all(
 					notReceivedChats.map(
-						async (
-							{ id, lastReceivedDate, silent, received, firstName, lastName },
-							index,
-						) => {
+						async ({
+							id,
+							lastReceivedDate,
+							silent,
+							received,
+							firstName,
+							lastName,
+						}) => {
 							const isAlreadyReceived =
 								lastReceivedDate &&
 								beginDateTime - new Date(lastReceivedDate).getTime() < 86400000;
@@ -483,7 +487,7 @@ class BotController {
 								});
 
 								//log
-								logMessage += `${index > 0 ? "\n" : ""}${
+								logMessage += `\n${
 									firstName
 										? `${firstName}${lastName ? ` ${lastName}` : ""}`
 										: id.toString()
@@ -505,7 +509,7 @@ class BotController {
 						username: "day_foresight_bot",
 					} as ChatDto,
 					"hour shedule",
-					logMessage,
+					logMessage.replace("\n", ""),
 				);
 
 				return;
