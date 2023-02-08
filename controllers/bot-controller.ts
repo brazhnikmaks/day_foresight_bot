@@ -70,18 +70,6 @@ class BotController {
 		await bot.sendMessage(chatId, `Помилочка  ¯\\_(ツ)_/¯`);
 	}
 
-	async addLog(chat: ChatDto, action: string, message: string) {
-		const { firstName, lastName, username, id } = chat;
-		await db.addLog(
-			firstName
-				? `${firstName}${lastName ? ` ${lastName}` : ""}`
-				: id.toString(),
-			action,
-			message,
-			username,
-		);
-	}
-
 	async onHelp(chatId: number) {
 		let hour = 12;
 		let chat = {} as ChatDto;
@@ -137,9 +125,6 @@ class BotController {
 			}
 
 			await this.setCommands();
-
-			//log
-			await this.addLog(chat, "/start", "Приєднався до бота");
 		} catch (e) {
 			try {
 				const chat = await db.getChat(chatId);
@@ -198,7 +183,6 @@ class BotController {
 				(foresight) => !received.includes(foresight.id),
 			);
 
-			//log
 			let foresight: ForesightDto;
 
 			if (!notReceivedForesights.length) {
@@ -215,9 +199,6 @@ class BotController {
 				`🥠 ${foresight.text}`,
 				this.setReplyKeyboard(chat),
 			);
-
-			//log
-			await this.addLog(chat, "/foresight", foresight.text);
 		} catch (e) {
 			await this.sendError(chatId);
 		}
@@ -249,13 +230,6 @@ class BotController {
 					? "🔔 Ви підписалися на щоденні передбачення."
 					: `🔕 Ви відписались від щоденних передбачень. Ви можете отримати передбачення в "Меню", але один раз на день.`,
 				this.setReplyKeyboard(chat),
-			);
-
-			//log
-			await this.addLog(
-				chat,
-				subscribe ? "/subscribe" : "/unsubscribe",
-				subscribe ? "Підписався" : "Відписався",
 			);
 
 			return;
@@ -290,13 +264,6 @@ class BotController {
 					? "🔇 Ваші пердбачення будуть надходити без звуку."
 					: "🔈 Ваші пердбачення будуть надходити зі звуком.",
 				this.setReplyKeyboard(chat),
-			);
-
-			//log
-			await this.addLog(
-				chat,
-				mute ? "/mute" : "/unmute",
-				mute ? "Прибрав звук" : "Повернув звук",
 			);
 
 			return;
@@ -346,9 +313,6 @@ class BotController {
 				`${timeIcon} Час отримання щоденних передбачень змінено на ${hour}:00 за українським часовим поясом`,
 				this.setReplyKeyboard(chat),
 			);
-
-			//log
-			await this.addLog(chat, "/hour", `Новий час оповіщень: ${hour}:00`);
 
 			return;
 		} catch (e) {
@@ -445,19 +409,9 @@ class BotController {
 
 				const foresights = await db.getForesights();
 
-				//log
-				let logMessage: string = "";
-
 				await Promise.all(
 					notReceivedChats.map(
-						async ({
-							id,
-							lastReceivedDate,
-							silent,
-							received,
-							firstName,
-							lastName,
-						}) => {
+						async ({ id, lastReceivedDate, silent, received }) => {
 							const isAlreadyReceived =
 								lastReceivedDate &&
 								beginDateTime - new Date(lastReceivedDate).getTime() < 86400000;
@@ -485,13 +439,6 @@ class BotController {
 									...this.setReplyKeyboard(chat),
 									disable_notification: silent,
 								});
-
-								//log
-								logMessage += `\n${
-									firstName
-										? `${firstName}${lastName ? ` ${lastName}` : ""}`
-										: id.toString()
-								}: ${foresight.text}`;
 							} catch (e) {
 								// @ts-ignore
 								if (e.response.body.error_code === 403) {
@@ -500,16 +447,6 @@ class BotController {
 							}
 						},
 					),
-				);
-
-				//log
-				await this.addLog(
-					{
-						firstName: "bot",
-						username: "day_foresight_bot",
-					} as ChatDto,
-					"hour shedule",
-					logMessage.replace("\n", ""),
 				);
 
 				return;
