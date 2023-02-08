@@ -321,6 +321,7 @@ class BotController {
 	}
 
 	async onAction(msg: Message) {
+		console.log(msg);
 		let {
 			text,
 			chat: { id: chatId },
