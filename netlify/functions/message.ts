@@ -3,7 +3,6 @@ import { Message } from "node-telegram-bot-api";
 import botController from "../../controllers/bot-controller";
 
 const handler: Handler = async (event: HandlerEvent) => {
-	console.log(event);
 	const message = JSON.parse(event.body!).message as Message;
 
 	await botController.onAction.bind(botController)(message);
