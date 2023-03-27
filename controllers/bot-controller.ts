@@ -7,6 +7,7 @@ import bot from "../servises/telefram-service";
 import db from "../servises/mongo-service";
 import { getRandom, getTimeIcon } from "../utils";
 import { ChatDto, ForesightDto } from "../dtos";
+import {UKRAINE_TIME_OFFSET} from "../consts";
 
 class BotController {
 	waitForReply: {
@@ -156,7 +157,7 @@ class BotController {
 			chat: { id: chatId },
 		} = msg;
 
-		const dateNow = new Date(Date.now() + 120 * 60 * 1000).setUTCHours(
+		const dateNow = new Date(Date.now() + UKRAINE_TIME_OFFSET * 60 * 1000).setUTCHours(
 			0,
 			0,
 			0,
@@ -385,7 +386,7 @@ class BotController {
 	}
 
 	async foresightForAll() {
-		const dateNow = new Date(Date.now() + 120 * 60 * 1000);
+		const dateNow = new Date(Date.now() + UKRAINE_TIME_OFFSET * 60 * 1000);
 		const currentHour = dateNow.getHours();
 		const beginDateTime = dateNow.setUTCHours(0, 0, 0, 0);
 
